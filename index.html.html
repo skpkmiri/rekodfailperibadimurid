@@ -1,0 +1,597 @@
+<!-- ... existing code ... -->
+  <!-- Firebase SDK Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // User Provided Firebase Configuration
+    const userFirebaseConfig = {
+      apiKey: "AIzaSyA9e7QuGWb15HXC4BtcuSBuG0qI0oMTSQ4",
+      authDomain: "rekod-fail-peribadi-murid.firebaseapp.com",
+      projectId: "rekod-fail-peribadi-murid",
+      storageBucket: "rekod-fail-peribadi-murid.firebasestorage.app",
+      messagingSenderId: "975219561727",
+      appId: "1:975219561727:web:85bc24b951d487ca9868ca",
+      measurementId: "G-VR53XTPNM2"
+    };
+
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFirebaseConfig;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'rekod-fail-peribadi-murid';
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Kekalkan Sesi Log Masuk Tanpa Expiration
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
+
+    // Export to global scope for React app usage
+    window.Firebase = {
+      app,
+      auth,
+      db,
+      appId,
+      signInAnonymously,
+      signInWithCustomToken,
+      onAuthStateChanged,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      deleteDoc,
+      onSnapshot,
+      collection
+    };
+  </script>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Custom Icon Wrapper Component
+    const IconWrapper = ({ children, className = "w-5 h-5", ...props }) => (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        {children}
+      </svg>
+    );
+
+    const Users = (p) => <IconWrapper {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconWrapper>;
+    const Archive = (p) => <IconWrapper {...p}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></IconWrapper>;
+    const Megaphone = (p) => <IconWrapper {...p}><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></IconWrapper>;
+    const LogOut = (p) => <IconWrapper {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></IconWrapper>;
+    const Plus = (p) => <IconWrapper {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></IconWrapper>;
+    const Trash2 = (p) => <IconWrapper {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconWrapper>;
+    const Menu = (p) => <IconWrapper {...p}><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></IconWrapper>;
+    const X = (p) => <IconWrapper {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconWrapper>;
+    const Key = (p) => <IconWrapper {...p}><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></IconWrapper>;
+    const ShieldCheck = (p) => <IconWrapper {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></IconWrapper>;
+    const Edit = (p) => <IconWrapper {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconWrapper>;
+    const Check = (p) => <IconWrapper {...p}><polyline points="20 6 9 17 4 12"/></IconWrapper>;
+    const Search = (p) => <IconWrapper {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconWrapper>;
+    const Pin = (p) => <IconWrapper {...p}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14l-1.5-6h1c.8 0 1.5-.7 1.5-1.5v-1c0-.8-.7-1.5-1.5-1.5H4c-.8 0-1.5.7-1.5 1.5v1c0 .8.7 1.5 1.5 1.5h1L5 17z"/></IconWrapper>;
+    const Bell = (p) => <IconWrapper {...p}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></IconWrapper>;
+    const LayoutDashboard = (p) => <IconWrapper {...p}><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></IconWrapper>;
+    const BookOpen = (p) => <IconWrapper {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+    const Upload = (p) => <IconWrapper {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></IconWrapper>;
+    const ArrowLeft = (p) => <IconWrapper {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></IconWrapper>;
+    const FileText = (p) => <IconWrapper {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></IconWrapper>;
+    const Download = (p) => <IconWrapper {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconWrapper>;
+    const UserPlus = (p) => <IconWrapper {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></IconWrapper>;
+    const UserCheck = (p) => <IconWrapper {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></IconWrapper>;
+    const ShieldAlert = (p) => <IconWrapper {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconWrapper>;
+    const Settings = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></IconWrapper>;
+    const Eye = (p) => <IconWrapper {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></IconWrapper>;
+    const RefreshCw = (p) => <IconWrapper {...p}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></IconWrapper>;
+    const CloudCheck = (p) => <IconWrapper {...p}><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 2 14.9"/><polyline points="9 17 12 20 18 14"/></IconWrapper>;
+    const Database = (p) => <IconWrapper {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></IconWrapper>;
+
+<!-- ... existing code ... -->
+    // Document Settings Component (Enhanced with Backup & Restore capabilities)
+    const DocumentSettings = ({ categories, onSaveCategory, onDeleteCategory, currentUser, onExportData, onImportData }) => {
+      const [newCategory, setNewCategory] = useState('');
+      const [editingId, setEditingId] = useState(null);
+      const [editName, setEditName] = useState('');
+      const [importStatus, setImportStatus] = useState('');
+
+      const handleAddCategory = (e) => {
+        e.preventDefault();
+        if (!newCategory.trim()) return;
+        onSaveCategory({ id: 'doc_' + generateId(), label: newCategory.trim().toUpperCase() });
+        setNewCategory('');
+      };
+
+      const handleSaveEdit = (id) => {
+        if (!editName.trim()) return;
+        onSaveCategory({ id, label: editName.trim().toUpperCase() });
+        setEditingId(null);
+      };
+
+      const handleFileImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.students && data.users) {
+              onImportData(data);
+              setImportStatus('Data berjaya dipulihkan dari fail JSON.');
+            } else {
+              setImportStatus('Ralat: Format fail tidak sah.');
+            }
+          } catch (err) {
+            setImportStatus('Ralat semasa membaca fail JSON.');
+          }
+        };
+        reader.readAsText(file);
+      };
+
+      return (
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Section 1: Data Backup & Restore (Guarantee Perpetual Access) */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><Database className="w-5 h-5 text-indigo-600"/> Sandaran Data & Pemulihan (Kekal Tanpa Had Masa)</h2>
+            <p className="text-sm text-slate-500 mb-4">Muat turun salinan lengkap pangkalan data sistem untuk disimpan secara tempatan pada bila-bila masa. Anda boleh memulihkan data ini semula pada bila-bila masa.</p>
+            
+            <div className="flex flex-wrap gap-4 items-center">
+              <button onClick={onExportData} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors">
+                <Download className="w-4 h-4"/> Eksport Pangkalan Data (.JSON)
+              </button>
+              
+              <label className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 cursor-pointer transition-colors">
+                <Upload className="w-4 h-4"/> Import Pangkalan Data
+                <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
+              </label>
+            </div>
+            {importStatus && <p className="text-xs font-semibold mt-3 text-indigo-600">{importStatus}</p>}
+          </div>
+
+          {/* Section 2: Document Categories */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><Settings className="w-5 h-5 text-indigo-600"/> Tetapan Kategori Dokumen Rasmi</h2>
+            <p className="text-sm text-slate-500 mb-6">Urus senarai jenis dokumen rasmi yang perlu dimuat naik oleh guru semasa pendaftaran murid.</p>
+            
+            {currentUser.role === 'admin' && (
+              <form onSubmit={handleAddCategory} className="flex gap-4 mb-8">
+                <input type="text" placeholder="Nama Kategori Baharu (Cth: REKOD KESIHATAN)" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="flex-1 px-4 py-2 rounded-lg border border-slate-300 outline-none focus:border-indigo-500 uppercase" required />
+                <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Tambah Kategori
+                </button>
+              </form>
+            )}
+
+            <div className="space-y-3">
+              {categories.map(cat => (
+                <div key={cat.id} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl bg-slate-50 hover:border-indigo-100 transition-colors">
+                  {editingId === cat.id ? (
+                    <div className="flex flex-1 gap-2 mr-4">
+                      <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1 px-3 py-1.5 rounded border border-indigo-300 outline-none focus:ring-2 focus:ring-indigo-200 text-sm uppercase" autoFocus />
+                      <button onClick={() => handleSaveEdit(cat.id)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-1"><Check className="w-4 h-4"/> Simpan</button>
+                      <button onClick={() => setEditingId(null)} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded text-sm font-medium">Batal</button>
+                    </div>
+                  ) : (
+                    <span className="font-semibold text-slate-700 text-sm">{cat.label}</span>
+                  )}
+                  
+                  {!editingId && currentUser.role === 'admin' && (
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditingId(cat.id); setEditName(cat.label); }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => onDeleteCategory(cat.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+<!-- ... existing code ... -->
+    // Main App Component (With Perpetual Offline/Online Synchronization)
+    const App = () => {
+      const [currentUser, setCurrentUser] = useState(() => {
+        const saved = localStorage.getItem('skpk_user');
+        return saved ? JSON.parse(saved) : null;
+      });
+
+      // Load initial state from LocalStorage fallback if present to ensure offline capability
+      const loadLocalFallback = (key, defaultVal) => {
+        try {
+          const stored = localStorage.getItem('skpk_db_' + key);
+          return stored ? JSON.parse(stored) : defaultVal;
+        } catch(e) {
+          return defaultVal;
+        }
+      };
+
+      const [users, setUsers] = useState(() => loadLocalFallback('users', DEFAULT_USERS));
+      const [classes, setClasses] = useState(() => loadLocalFallback('classes', DEFAULT_CLASSES));
+      const [docCategories, setDocCategories] = useState(() => loadLocalFallback('docCategories', DEFAULT_DOC_CATEGORIES));
+      const [students, setStudents] = useState(() => loadLocalFallback('students', DEFAULT_STUDENTS));
+      const [announcements, setAnnouncements] = useState(() => loadLocalFallback('announcements', DEFAULT_ANNOUNCEMENTS));
+
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+      const [isFirebaseConnected, setIsFirebaseConnected] = useState(false);
+
+      useEffect(() => {
+        localStorage.setItem('skpk_user', JSON.stringify(currentUser));
+      }, [currentUser]);
+
+      // Mirror state changes to local storage continuously
+      const updateLocalState = (key, val) => {
+        try {
+          localStorage.setItem('skpk_db_' + key, JSON.stringify(val));
+        } catch(e) {
+          console.warn("Storage full or blocked", e);
+        }
+      };
+
+      // Initialize Firebase Auth & Realtime Firestore Sync
+      useEffect(() => {
+        let unsubs = [];
+
+        const initCloudSync = async () => {
+          if (!window.Firebase) return;
+          const { auth, db, appId, signInAnonymously, signInWithCustomToken, onAuthStateChanged, collection, onSnapshot, setDoc, doc } = window.Firebase;
+
+          try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+              await signInAnonymously(auth);
+            }
+          } catch (err) {
+            console.warn("Auth token fallback to anonymous:", err);
+            await signInAnonymously(auth);
+          }
+
+          onAuthStateChanged(auth, (user) => {
+            if (!user) return;
+            setIsFirebaseConnected(true);
+
+            // Firestore Helper for Public Collection Listener with Local Fail-Safe
+            const bindCollection = (collName, setFn, seedData) => {
+              const collRef = collection(db, 'artifacts', appId, 'public', 'data', collName);
+              const unsub = onSnapshot(
+                collRef,
+                (snapshot) => {
+                  if (snapshot.empty && seedData) {
+                    seedData.forEach(item => {
+                      const idKey = item.id || item.ic;
+                      setDoc(doc(db, 'artifacts', appId, 'public', 'data', collName, String(idKey)), item);
+                    });
+                  } else {
+                    const list = [];
+                    snapshot.forEach(d => list.push(d.data()));
+                    setFn(list);
+                    updateLocalState(collName, list);
+                  }
+                },
+                (err) => {
+                  console.warn(`Snapshot fallback for ${collName}:`, err);
+                  // Gunakan data simpanan tempatan jika awan terputus/tamat tempoh
+                  setFn(prev => prev.length > 0 ? prev : seedData);
+                }
+              );
+              unsubs.push(unsub);
+            };
+
+            bindCollection('users', setUsers, DEFAULT_USERS);
+            bindCollection('classes', setClasses, DEFAULT_CLASSES);
+            bindCollection('docCategories', setDocCategories, DEFAULT_DOC_CATEGORIES);
+            bindCollection('students', setStudents, DEFAULT_STUDENTS);
+            bindCollection('announcements', setAnnouncements, DEFAULT_ANNOUNCEMENTS);
+          });
+        };
+
+        initCloudSync();
+
+        return () => {
+          unsubs.forEach(fn => fn && fn());
+        };
+      }, []);
+
+      // Data Backup & Export Feature
+      const exportDatabase = () => {
+        const fullBackup = {
+          exportDate: new Date().toISOString(),
+          users,
+          classes,
+          docCategories,
+          students,
+          announcements
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullBackup, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `SKPK_MIRI_BACKUP_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+      };
+
+      // Data Restore Feature
+      const importDatabase = (importedData) => {
+        if (importedData.users) { setUsers(importedData.users); updateLocalState('users', importedData.users); }
+        if (importedData.classes) { setClasses(importedData.classes); updateLocalState('classes', importedData.classes); }
+        if (importedData.docCategories) { setDocCategories(importedData.docCategories); updateLocalState('docCategories', importedData.docCategories); }
+        if (importedData.students) { setStudents(importedData.students); updateLocalState('students', importedData.students); }
+        if (importedData.announcements) { setAnnouncements(importedData.announcements); updateLocalState('announcements', importedData.announcements); }
+      };
+
+      // Cloud Operations with Local Fallback Update
+      const saveUserToCloud = (userObj) => {
+        setUsers(prev => {
+          const updated = [...prev.filter(u => u.ic !== userObj.ic), userObj];
+          updateLocalState('users', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, setDoc, doc } = window.Firebase;
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', String(userObj.ic)), userObj).catch(console.error);
+      };
+
+      const deleteUserFromCloud = (userIc) => {
+        setUsers(prev => {
+          const updated = prev.filter(u => u.ic !== userIc);
+          updateLocalState('users', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, deleteDoc, doc } = window.Firebase;
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', String(userIc))).catch(console.error);
+      };
+
+      const saveClassToCloud = (classObj) => {
+        setClasses(prev => {
+          const updated = [...prev.filter(c => c.id !== classObj.id), classObj];
+          updateLocalState('classes', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, setDoc, doc } = window.Firebase;
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'classes', String(classObj.id)), classObj).catch(console.error);
+      };
+
+      const deleteClassFromCloud = (classId) => {
+        setClasses(prev => {
+          const updated = prev.filter(c => c.id !== classId);
+          updateLocalState('classes', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, deleteDoc, doc } = window.Firebase;
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'classes', String(classId))).catch(console.error);
+      };
+
+      const saveCategoryToCloud = (catObj) => {
+        setDocCategories(prev => {
+          const updated = [...prev.filter(c => c.id !== catObj.id), catObj];
+          updateLocalState('docCategories', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, setDoc, doc } = window.Firebase;
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'docCategories', String(catObj.id)), catObj).catch(console.error);
+      };
+
+      const deleteCategoryFromCloud = (catId) => {
+        setDocCategories(prev => {
+          const updated = prev.filter(c => c.id !== catId);
+          updateLocalState('docCategories', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, deleteDoc, doc } = window.Firebase;
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'docCategories', String(catId))).catch(console.error);
+      };
+
+      const saveStudentToCloud = (stdObj) => {
+        setStudents(prev => {
+          const updated = [...prev.filter(s => s.id !== stdObj.id), stdObj];
+          updateLocalState('students', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, setDoc, doc } = window.Firebase;
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', String(stdObj.id)), stdObj).catch(console.error);
+      };
+
+      const deleteStudentFromCloud = (stdId) => {
+        setStudents(prev => {
+          const updated = prev.filter(s => s.id !== stdId);
+          updateLocalState('students', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, deleteDoc, doc } = window.Firebase;
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', String(stdId))).catch(console.error);
+      };
+
+      const saveAnnouncementToCloud = (annObj) => {
+        setAnnouncements(prev => {
+          const updated = [...prev.filter(a => a.id !== annObj.id), annObj];
+          updateLocalState('announcements', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, setDoc, doc } = window.Firebase;
+        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'announcements', String(annObj.id)), annObj).catch(console.error);
+      };
+
+      const deleteAnnouncementFromCloud = (annId) => {
+        setAnnouncements(prev => {
+          const updated = prev.filter(a => a.id !== annId);
+          updateLocalState('announcements', updated);
+          return updated;
+        });
+        if (!window.Firebase) return;
+        const { db, appId, deleteDoc, doc } = window.Firebase;
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'announcements', String(annId))).catch(console.error);
+      };
+
+      if (!currentUser) {
+        return <LoginScreen users={users} onLogin={setCurrentUser} />;
+      }
+
+      const activeStudentsCount = students.filter(s => !s.isArchived).length;
+      const archivedStudentsCount = students.filter(s => s.isArchived).length;
+
+      const navItems = [
+        { id: 'dashboard', label: 'Papan Utama', icon: LayoutDashboard },
+        { id: 'students', label: 'Rekod Murid', icon: Users },
+        { id: 'archive', label: 'Arkib Murid', icon: Archive },
+        { id: 'classes', label: 'Pengurusan Kelas', icon: BookOpen },
+        { id: 'teachers', label: 'Kakitangan / Guru', icon: UserCheck },
+        { id: 'docSettings', label: 'Tetapan Dokumen', icon: Settings },
+      ];
+
+      return (
+        <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+          {/* Mobile Navigation Header */}
+          <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center no-print">
+            <h1 className="font-extrabold text-sm tracking-wider">SKPK MIRI</h1>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1">
+              {isMobileMenuOpen ? <X className="w-6 h-6"/> : <Menu className="w-6 h-6"/>}
+            </button>
+          </div>
+
+          {/* Sidebar */}
+          <aside className={`no-print w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 ${isMobileMenuOpen ? 'block' : 'hidden md:flex'}`}>
+            <div>
+              <div className="p-3 mb-6 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg">
+                    SK
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-white text-sm leading-tight">SK PENDIDIKAN KHAS MIRI</h2>
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-0.5">SISTEM REKOD FAIL</p>
+                  </div>
+                </div>
+
+                {/* Cloud Status Indicator */}
+                <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className={`w-2 h-2 rounded-full ${isFirebaseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                    {isFirebaseConnected ? 'Firebase Realtime' : 'Mod Tempatan (Offline)'}
+                  </span>
+                  <CloudCheck className={`w-4 h-4 ${isFirebaseConnected ? 'text-emerald-400' : 'text-amber-400'}`} />
+                </div>
+              </div>
+
+              <nav className="space-y-1">
+                {navItems.map(item => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-colors ${isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="p-3 border-t border-slate-800 mt-6">
+              <div className="mb-3 px-2">
+                <p className="text-xs text-slate-400 font-semibold truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-indigo-400 uppercase font-bold">{currentUser.role === 'admin' ? 'Pentadbir / Admin' : 'Guru'}</p>
+              </div>
+              <button
+                onClick={() => setCurrentUser(null)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-rose-400 hover:bg-rose-500/10 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <LogOut className="w-4 h-4" /> Log Keluar
+              </button>
+            </div>
+          </aside>
+
+          {/* Main Workspace */}
+          <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+            {activeTab === 'dashboard' && (
+              <Dashboard
+                announcements={announcements}
+                onSaveAnnouncement={saveAnnouncementToCloud}
+                onDeleteAnnouncement={deleteAnnouncementFromCloud}
+                currentUser={currentUser}
+                stats={{
+                  activeStudents: activeStudentsCount,
+                  classesCount: classes.length,
+                  teachersCount: users.length,
+                  archivedCount: archivedStudentsCount
+                }}
+              />
+            )}
+
+            {activeTab === 'students' && (
+              <StudentManagement
+                students={students}
+                onSaveStudent={saveStudentToCloud}
+                onDeleteStudent={deleteStudentFromCloud}
+                classes={classes}
+                docCategories={docCategories}
+                currentUser={currentUser}
+                isArchiveView={false}
+              />
+            )}
+
+            {activeTab === 'archive' && (
+              <StudentManagement
+                students={students}
+                onSaveStudent={saveStudentToCloud}
+                onDeleteStudent={deleteStudentFromCloud}
+                classes={classes}
+                docCategories={docCategories}
+                currentUser={currentUser}
+                isArchiveView={true}
+              />
+            )}
+
+            {activeTab === 'classes' && (
+              <ClassManagement
+                classes={classes}
+                onSaveClass={saveClassToCloud}
+                onDeleteClass={deleteClassFromCloud}
+                currentUser={currentUser}
+              />
+            )}
+
+            {activeTab === 'teachers' && (
+              <TeacherManagement
+                users={users}
+                onSaveUser={saveUserToCloud}
+                onDeleteUser={deleteUserFromCloud}
+                currentUser={currentUser}
+              />
+            )}
+
+            {activeTab === 'docSettings' && (
+              <DocumentSettings
+                categories={docCategories}
+                onSaveCategory={saveCategoryToCloud}
+                onDeleteCategory={deleteCategoryFromCloud}
+                currentUser={currentUser}
+                onExportData={exportDatabase}
+                onImportData={importDatabase}
+              />
+            )}
+          </main>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
